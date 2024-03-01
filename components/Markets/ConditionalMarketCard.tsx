@@ -515,7 +515,6 @@ export function ConditionalMarketCard({ isPassMarket = false }: { isPassMarket?:
                 placeholder="Enter amount..."
                 type="number"
                 value={amount || ''}
-                defaultValue={amount || ''}
                 rightSectionWidth={70}
                 rightSection={
                   <ActionIcon

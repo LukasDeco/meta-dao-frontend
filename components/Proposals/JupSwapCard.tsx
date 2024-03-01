@@ -35,7 +35,7 @@ const tokens = [
 export function JupSwapCard() {
   const provider = useProvider();
   const [inAmount, setInAmount] = useState<number>(1);
-  const [outAmount, setOutAmount] = useState<number>();
+  const [outAmount, setOutAmount] = useState<number>(0);
   const [base, setBase] = useState<string>('meta');
   const [quote, setQuote] = useState<string>('usdc');
   const [isSwapping, setIsSwapping] = useState(false);
@@ -44,16 +44,16 @@ export function JupSwapCard() {
   const balance = useBalance(
     new PublicKey(
       tokens.filter((token) => token.name === base)[0].mintAddress
-  ));
+    ));
 
   const fetchQuote = async (amount: number, slippage: number) => {
     const baseMint: {
       mintAddress: string,
-      name: string
+      name: string;
     } = tokens.filter((token) => token.name === base)[0];
     const quoteMint: {
       mintAddress: string,
-      name: string
+      name: string;
     } = tokens.filter((token) => token.name === quote)[0];
 
     const quoteResponse = await jupiterQuoteApi.quoteGet({
@@ -160,8 +160,8 @@ export function JupSwapCard() {
         rightSectionWidth={100}
         rightSection={
           <>
-          <Divider orientation="vertical" />
-          <Text pl={10}>{base.toLocaleUpperCase()}</Text>
+            <Divider orientation="vertical" />
+            <Text pl={10}>{base.toLocaleUpperCase()}</Text>
           </>
         }
       />
@@ -182,8 +182,8 @@ export function JupSwapCard() {
         rightSectionWidth={100}
         rightSection={
           <>
-          <Divider orientation="vertical" />
-          <Text pl={10}>{quote.toLocaleUpperCase()}</Text>
+            <Divider orientation="vertical" />
+            <Text pl={10}>{quote.toLocaleUpperCase()}</Text>
           </>
         }
       />
