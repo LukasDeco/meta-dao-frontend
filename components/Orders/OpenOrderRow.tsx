@@ -27,14 +27,15 @@ import { useTransactionSender } from '@/hooks/useTransactionSender';
 import { NUMERAL_FORMAT, BASE_FORMAT, QUOTE_LOTS } from '@/lib/constants';
 import { useProposal } from '@/contexts/ProposalContext';
 import { isBid, isPartiallyFilled, isPass } from '@/lib/openbook';
+import { useOrders } from '@/contexts/OrdersContext';
 
-export function OpenOrderRow({ order }: { order: OpenOrdersAccountWithKey }) {
-  const { markets } = useProposal();
+export function OpenOrderRow({ order }: { order: OpenOrdersAccountWithKey; }) {
   const theme = useMantineTheme();
   const sender = useTransactionSender();
   const wallet = useWallet();
   const { generateExplorerLink } = useExplorerConfiguration();
-  const { proposal, fetchOpenOrders } = useProposal();
+  const { proposal } = useProposal();
+  const { fetchOpenOrders, markets } = useOrders();
   const { settleFundsTransactions, cancelOrderTransactions, editOrderTransactions } =
     useOpenbookTwap();
 
@@ -214,21 +215,21 @@ export function OpenOrderRow({ order }: { order: OpenOrdersAccountWithKey }) {
         {/* Notional */}$
         {editingOrder === order
           ? numeral(
-              (editedPrice || order.account.openOrders[0].lockedPrice * QUOTE_LOTS) *
-                (editedSize ||
-                  (isBid(order)
-                    ? order.account.position.bidsBaseLots
-                    : order.account.position.asksBaseLots)),
-            ).format(NUMERAL_FORMAT)
+            (editedPrice || order.account.openOrders[0].lockedPrice * QUOTE_LOTS) *
+            (editedSize ||
+              (isBid(order)
+                ? order.account.position.bidsBaseLots
+                : order.account.position.asksBaseLots)),
+          ).format(NUMERAL_FORMAT)
           : numeral(
-              isBid(order)
-                ? order.account.position.bidsBaseLots *
-                    order.account.openOrders[0].lockedPrice *
-                    QUOTE_LOTS
-                : order.account.position.asksBaseLots *
-                    order.account.openOrders[0].lockedPrice *
-                    QUOTE_LOTS,
-            ).format(NUMERAL_FORMAT)}
+            isBid(order)
+              ? order.account.position.bidsBaseLots *
+              order.account.openOrders[0].lockedPrice *
+              QUOTE_LOTS
+              : order.account.position.asksBaseLots *
+              order.account.openOrders[0].lockedPrice *
+              QUOTE_LOTS,
+          ).format(NUMERAL_FORMAT)}
       </Table.Td>
       <Table.Td>
         {isPartiallyFilled(order) && (

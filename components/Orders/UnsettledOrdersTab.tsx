@@ -10,13 +10,15 @@ import { useProposal } from '@/contexts/ProposalContext';
 import { isClosableOrder, isPartiallyFilled } from '@/lib/openbook';
 import { UnsettledOrderRow } from './UnsettledOrderRow';
 import { useBalances } from '../../contexts/BalancesContext';
+import { useOrders } from '@/contexts/OrdersContext';
 
 const headers = ['Order ID', 'Market', 'Claimable', 'Actions'];
 
-export function UnsettledOrdersTab({ orders }: { orders: OpenOrdersAccountWithKey[] }) {
+export function UnsettledOrdersTab({ orders }: { orders: OpenOrdersAccountWithKey[]; }) {
   const sender = useTransactionSender();
   const wallet = useWallet();
-  const { proposal, markets, fetchOpenOrders } = useProposal();
+  const { proposal } = useProposal();
+  const { markets, fetchOpenOrders } = useOrders();
   const { fetchBalance } = useBalances();
   const { settleFundsTransactions, closeOpenOrdersAccountTransactions } = useOpenbookTwap();
 

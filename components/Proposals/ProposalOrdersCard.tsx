@@ -12,10 +12,12 @@ import {
 import { OpenOrdersTab } from '@/components/Orders/OpenOrdersTab';
 import { UnsettledOrdersTab } from '@/components/Orders/UnsettledOrdersTab';
 import { UncrankedOrdersTab } from '@/components/Orders/UncrankedOrdersTab';
+import { useOrders } from '@/contexts/OrdersContext';
 
 export function ProposalOrdersCard() {
   const wallet = useWallet();
-  const { fetchOpenOrders, proposal, orders, markets } = useProposal();
+  const { proposal } = useProposal();
+  const { fetchOpenOrders, orders, markets } = useOrders();
 
   if (!orders || !markets) return <></>;
 

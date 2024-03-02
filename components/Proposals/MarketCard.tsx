@@ -26,12 +26,14 @@ import { useAutocrat } from '../../contexts/AutocratContext';
 import { getParsedOrders } from '@/lib/openbook';
 import { useProposal } from '@/contexts/ProposalContext';
 import { useBalance } from '@/hooks/useBalance';
+import { useOrders } from '@/contexts/OrdersContext';
 
 export function MarketCard() {
   const { connection } = useConnection();
   const { daoTreasury } = useAutocrat();
-  const { proposal, markets, mintTokensTransactions, placeOrderTransactions, fetchMarketsInfo } =
+  const { proposal, mintTokensTransactions } =
     useProposal();
+  const { placeOrderTransactions, fetchMarketsInfo, markets } = useOrders();
   const { amount: baseBalance } = useBalance(markets?.baseVault.underlyingTokenMint);
   const { amount: quoteBalance } = useBalance(markets?.quoteVault.underlyingTokenMint);
   const { tokens } = useTokens();
