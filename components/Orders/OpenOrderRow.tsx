@@ -20,16 +20,15 @@ import {
   IconCheck,
 } from '@tabler/icons-react';
 import { BN } from '@coral-xyz/anchor';
-import { OpenOrdersAccountWithKey } from '@/lib/types';
 import { useExplorerConfiguration } from '@/hooks/useExplorerConfiguration';
 import { useOpenbookTwap } from '@/hooks/useOpenbookTwap';
 import { useTransactionSender } from '@/hooks/useTransactionSender';
 import { NUMERAL_FORMAT, BASE_FORMAT, QUOTE_LOTS } from '@/lib/constants';
 import { useProposal } from '@/contexts/ProposalContext';
 import { isBid, isPartiallyFilled, isPass } from '@/lib/openbook';
-import { useOrders } from '@/contexts/OrdersContext';
+import { OrderBookOrder, useOrders } from '@/contexts/OrdersContext';
 
-export function OpenOrderRow({ order }: { order: OpenOrdersAccountWithKey; }) {
+export function OpenOrderRow({ order }: { order: OrderBookOrder; }) {
   const theme = useMantineTheme();
   const sender = useTransactionSender();
   const wallet = useWallet();
@@ -41,7 +40,7 @@ export function OpenOrderRow({ order }: { order: OpenOrdersAccountWithKey; }) {
 
   const [isCanceling, setIsCanceling] = useState<boolean>(false);
   const [isEditing, setIsEditing] = useState<boolean>(false);
-  const [editingOrder, setEditingOrder] = useState<OpenOrdersAccountWithKey | undefined>();
+  const [editingOrder, setEditingOrder] = useState<OrderBookOrder | undefined>();
   const [editedSize, setEditedSize] = useState<number>();
   const [editedPrice, setEditedPrice] = useState<number>();
   const [isSettling, setIsSettling] = useState<boolean>(false);
@@ -50,8 +49,8 @@ export function OpenOrderRow({ order }: { order: OpenOrdersAccountWithKey; }) {
     if (!proposal || !markets) return;
 
     const txs = await cancelOrderTransactions(
-      new BN(order.account.accountNum),
-      proposal.account.openbookPassMarket.equals(order.account.market)
+      new BN(order.ownerSlot), //accountNum is publicKey.. or maybe leafNode.ownerSlot 
+      proposal.account.openbookPassMarket.equals(order.market)
         ? { publicKey: proposal.account.openbookPassMarket, account: markets.pass }
         : { publicKey: proposal.account.openbookFailMarket, account: markets.fail },
     );
@@ -84,24 +83,24 @@ export function OpenOrderRow({ order }: { order: OpenOrdersAccountWithKey; }) {
 
     const price =
       editedPrice ||
-      numeral(order.account.openOrders[0].lockedPrice.toString()).multiply(QUOTE_LOTS).value()!;
+      numeral(order.price).multiply(QUOTE_LOTS).value()!;
     const size =
       editedSize ||
-      (isBid(order)
-        ? order.account.position.bidsBaseLots
-        : order.account.position.asksBaseLots
-      ).toNumber();
+      order.size;
+
+    const market = proposal.account.openbookPassMarket.equals(order.market)
+      ? { publicKey: proposal.account.openbookPassMarket, account: markets.pass }
+      : { publicKey: proposal.account.openbookFailMarket, account: markets.fail };
+
     const txs = (
       await editOrderTransactions({
         order,
-        accountIndex: order.account.openOrders[0].clientId,
+        accountIndex: order.clientOrderId,
         amount: size,
         price,
         limitOrder: true,
-        ask: !isBid(order),
-        market: isPass(order, proposal)
-          ? { publicKey: proposal.account.openbookPassMarket, account: markets.pass }
-          : { publicKey: proposal.account.openbookFailMarket, account: markets.fail },
+        ask: order.side === "asks",
+        market: market,
       })
     )
       ?.flat()
@@ -132,9 +131,9 @@ export function OpenOrderRow({ order }: { order: OpenOrdersAccountWithKey; }) {
 
     setIsSettling(true);
     try {
-      const pass = order.account.market.equals(proposal.account.openbookPassMarket);
+      const pass = order.market.equals(proposal.account.openbookPassMarket);
       const txs = await settleFundsTransactions(
-        order.account.accountNum,
+        0,
         pass,
         proposal,
         pass
@@ -150,14 +149,14 @@ export function OpenOrderRow({ order }: { order: OpenOrdersAccountWithKey; }) {
   }, [order, proposal, settleFundsTransactions]);
 
   return (
-    <Table.Tr key={order.publicKey.toString()}>
+    <Table.Tr key={order.owner.toString()}>
       <Table.Td>
         <a
-          href={generateExplorerLink(order.publicKey.toString(), 'account')}
+          href={generateExplorerLink(order.owner.toString(), 'account')}
           target="_blank"
           rel="noreferrer"
         >
-          {order.account.accountNum}
+          {0}
         </a>
       </Table.Td>
       <Table.Td>
@@ -182,17 +181,13 @@ export function OpenOrderRow({ order }: { order: OpenOrdersAccountWithKey; }) {
             w="5rem"
             variant="filled"
             defaultValue={numeral(
-              isBid(order)
-                ? order.account.position.bidsBaseLots
-                : order.account.position.asksBaseLots,
+              order.size,
             ).format(BASE_FORMAT)}
             onChange={(e) => setEditedSize(Number(e.target.value))}
           />
         ) : (
           numeral(
-            isBid(order)
-              ? order.account.position.bidsBaseLots
-              : order.account.position.asksBaseLots,
+            order.size,
           ).format(BASE_FORMAT)
         )}
       </Table.Td>
@@ -202,33 +197,25 @@ export function OpenOrderRow({ order }: { order: OpenOrdersAccountWithKey; }) {
           <Input
             w="5rem"
             variant="filled"
-            defaultValue={numeral(order.account.openOrders[0].lockedPrice * QUOTE_LOTS).format(
+            defaultValue={numeral(order.price * QUOTE_LOTS).format(
               NUMERAL_FORMAT,
             )}
             onChange={(e) => setEditedPrice(Number(e.target.value))}
           />
         ) : (
-          `$${numeral(order.account.openOrders[0].lockedPrice * QUOTE_LOTS).format(NUMERAL_FORMAT)}`
+          `$${numeral(order.price * QUOTE_LOTS).format(NUMERAL_FORMAT)}`
         )}
       </Table.Td>
       <Table.Td>
         {/* Notional */}$
         {editingOrder === order
           ? numeral(
-            (editedPrice || order.account.openOrders[0].lockedPrice * QUOTE_LOTS) *
+            (editedPrice || order.price * QUOTE_LOTS) *
             (editedSize ||
-              (isBid(order)
-                ? order.account.position.bidsBaseLots
-                : order.account.position.asksBaseLots)),
-          ).format(NUMERAL_FORMAT)
+              (order.size)
+            )).format(NUMERAL_FORMAT)
           : numeral(
-            isBid(order)
-              ? order.account.position.bidsBaseLots *
-              order.account.openOrders[0].lockedPrice *
-              QUOTE_LOTS
-              : order.account.position.asksBaseLots *
-              order.account.openOrders[0].lockedPrice *
-              QUOTE_LOTS,
+            order.size * order.price * QUOTE_LOTS,
           ).format(NUMERAL_FORMAT)}
       </Table.Td>
       <Table.Td>

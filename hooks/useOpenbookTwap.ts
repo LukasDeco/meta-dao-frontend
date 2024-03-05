@@ -40,6 +40,7 @@ import { useConditionalVault } from './useConditionalVault';
 import { useOpenbook } from './useOpenbook';
 import { useTransactionSender } from './useTransactionSender';
 import { getTwapMarketKey } from '../lib/openbookTwap';
+import { OrderBookOrder } from '@/contexts/OrdersContext';
 
 const OPENBOOK_TWAP_IDL: OpenbookTwap = require('@/lib/idl/openbook_twap.json');
 
@@ -471,7 +472,7 @@ export function useOpenbookTwap() {
       ask,
       market,
     }: {
-      order: OpenOrdersAccountWithKey;
+      order: OrderBookOrder;
       accountIndex: BN;
       amount: number;
       price: number;
@@ -483,7 +484,7 @@ export function useOpenbookTwap() {
         return;
       }
 
-      const openOrdersAccount = findOpenOrders(new BN(order.account.accountNum), wallet.publicKey);
+      const openOrdersAccount = findOpenOrders(new BN(order.ownerSlot), wallet.publicKey);
       const args = createPlaceOrderArgs({
         amount,
         price,
@@ -492,13 +493,13 @@ export function useOpenbookTwap() {
         accountIndex,
       });
       const expectedCancelSize = ask
-        ? order.account.position.asksBaseLots.sub(new BN(amount)).abs()
-        : new BN(amount).sub(order.account.position.bidsBaseLots).abs();
+        ? new BN(order.size).sub(new BN(amount)).abs()
+        : new BN(amount).sub(new BN(order.size)).abs();
       const mint = ask ? market.account.baseMint : market.account.quoteMint;
       const marketVault = ask ? market.account.marketBaseVault : market.account.marketQuoteVault;
       const userTokenAccount = getAssociatedTokenAddressSync(mint, wallet.publicKey);
       const editTx = await openbookTwap.methods
-        .editOrder(new BN(order.account.accountNum), expectedCancelSize, args)
+        .editOrder(new BN(order.ownerSlot), expectedCancelSize, args)
         .accounts({
           market: market.publicKey,
           asks: market.account.asks,

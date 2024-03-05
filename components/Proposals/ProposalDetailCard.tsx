@@ -54,7 +54,17 @@ export function ProposalDetailCard() {
   const { tokens } = useTokens();
   const { proposal, finalizeProposalTransactions } =
     useProposal();
-  const { orders, fetchOpenOrders, markets } = useOrders();
+  const { orders,
+    fetchOpenOrders,
+    markets,
+    passAsks,
+    passBids,
+    failAsks,
+    failBids,
+    lastPassSlotUpdated,
+    lastFailSlotUpdated,
+    passSpreadString,
+    failSpreadString } = useOrders();
   const { cancelOrderTransactions, settleFundsTransactions, closeOpenOrdersAccountTransactions } =
     useOpenbookTwap();
   const sender = useTransactionSender();
@@ -126,9 +136,10 @@ export function ProposalDetailCard() {
     ]);
     if (!txs) return;
     try {
-      // TODO test cancelling a finalizing pleaase
-      await sender.send(txs);
-      await fetchProposals();
+      const txnsSent = await sender.send(txs);
+      if (txnsSent.length > 0) {
+        await fetchProposals();
+      }
     } finally {
       setIsFinalizing(false);
     }
@@ -400,8 +411,24 @@ export function ProposalDetailCard() {
         <Stack style={{ flex: 1 }}>
           {markets ? (
             <Group gap="md" justify="space-around" mt="xl" p="0">
-              <ConditionalMarketCard isPassMarket />
-              <ConditionalMarketCard />
+              <ConditionalMarketCard
+                baseVaultTokenMint={markets.baseVault.conditionalOnFinalizeTokenMint}
+                quoteVaultTokenMint={markets.quoteVault.conditionalOnFinalizeTokenMint}
+                asks={passAsks ?? []}
+                bids={passBids ?? []}
+                lastSlotUpdated={lastPassSlotUpdated}
+                spreadString={passSpreadString}
+                isPassMarket={true}
+              />
+              <ConditionalMarketCard
+                baseVaultTokenMint={markets.baseVault.conditionalOnRevertTokenMint}
+                quoteVaultTokenMint={markets.quoteVault.conditionalOnRevertTokenMint}
+                asks={failAsks ?? []}
+                bids={failBids ?? []}
+                lastSlotUpdated={lastFailSlotUpdated}
+                spreadString={failSpreadString}
+                isPassMarket={false}
+              />
             </Group>
           ) : null}
           <ProposalOrdersCard />

@@ -20,9 +20,9 @@ import { BN_0 } from '@/lib/constants';
 import { useProposal } from '@/contexts/ProposalContext';
 import { isBid, isPartiallyFilled, isPass } from '@/lib/openbook';
 import { useBalances } from '../../contexts/BalancesContext';
-import { useOrders } from '@/contexts/OrdersContext';
+import { OrderBookOrder, useOrders } from '@/contexts/OrdersContext';
 
-export function UnsettledOrderRow({ order }: { order: OpenOrdersAccountWithKey; }) {
+export function UnsettledOrderRow({ order }: { order: OrderBookOrder; }) {
   const { } = useProposal();
   const theme = useMantineTheme();
   const sender = useTransactionSender();
@@ -41,9 +41,9 @@ export function UnsettledOrderRow({ order }: { order: OpenOrdersAccountWithKey; 
 
     setIsSettling(true);
     try {
-      const pass = order.account.market.equals(proposal.account.openbookPassMarket);
+      const pass = order.market.equals(proposal.account.openbookPassMarket);
       const txs = await settleFundsTransactions(
-        order.account.accountNum,
+        order.ownerSlot,
         pass,
         proposal,
         pass
@@ -65,7 +65,7 @@ export function UnsettledOrderRow({ order }: { order: OpenOrdersAccountWithKey; 
   const handleCloseAccount = useCallback(async () => {
     if (!proposal || !markets) return;
 
-    const txs = await closeOpenOrdersAccountTransactions(new BN(order.account.accountNum));
+    const txs = await closeOpenOrdersAccountTransactions(new BN(order.ownerSlot));
 
     if (!wallet.publicKey || !txs) return;
 
@@ -81,14 +81,14 @@ export function UnsettledOrderRow({ order }: { order: OpenOrdersAccountWithKey; 
   }, [proposal, sender, order, wallet]);
 
   return (
-    <Table.Tr key={order.publicKey.toString()}>
+    <Table.Tr key={order.owner.toString()}>
       <Table.Td>
         <a
-          href={generateExplorerLink(order.publicKey.toString(), 'account')}
+          href={generateExplorerLink(order.owner.toString(), 'account')}
           target="_blank"
           rel="noreferrer"
         >
-          {order.account.accountNum}
+          {order.ownerSlot}
         </a>
       </Table.Td>
       <Table.Td>
@@ -108,24 +108,23 @@ export function UnsettledOrderRow({ order }: { order: OpenOrdersAccountWithKey; 
       <Table.Td>
         <Stack gap={0}>
           <Text>
-            {`${order.account.position.baseFreeNative.toNumber() / 1_000_000_000} ${isPass(order, proposal) ? 'pMETA' : 'fMETA'
+            {`${order.price / 1_000_000_000} ${isPass(order, proposal) ? 'pMETA' : 'fMETA'
               }`}
           </Text>
           <Text>
-            {`${order.account.position.quoteFreeNative / 1_000_000} ${isPass(order, proposal) ? 'pUSDC' : 'fUSDC'
+            {`${order.price / 1_000_000} ${isPass(order, proposal) ? 'pUSDC' : 'fUSDC'
               }`}
           </Text>
         </Stack>
       </Table.Td>
       <Table.Td>
         <Group>
-          {order.account.position.asksBaseLots.gt(BN_0) ||
-            order.account.position.bidsBaseLots.gt(BN_0) ? (
+          {new BN(order.size).gt(BN_0) ? (
             <Tooltip label="Crank the market 🐷">
               <ActionIcon
                 variant="outline"
                 loading={isCranking}
-                onClick={() => crankMarkets(order.publicKey)}
+                onClick={() => crankMarkets(order.owner)}
               >
                 <Icon12Hours />
               </ActionIcon>
@@ -145,10 +144,7 @@ export function UnsettledOrderRow({ order }: { order: OpenOrdersAccountWithKey; 
           <Tooltip label="Close Account" events={{ hover: true, focus: true, touch: false }}>
             <ActionIcon
               disabled={
-                order.account.position.asksBaseLots > BN_0 ||
-                order.account.position.bidsBaseLots > BN_0 ||
-                order.account.position.baseFreeNative > BN_0 ||
-                order.account.position.quoteFreeNative > BN_0
+                new BN(order.size) > BN_0
               }
               variant="outline"
               loading={isClosing}

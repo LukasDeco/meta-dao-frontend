@@ -10,11 +10,11 @@ import { useProposal } from '@/contexts/ProposalContext';
 import { isClosableOrder, isPartiallyFilled } from '@/lib/openbook';
 import { UnsettledOrderRow } from './UnsettledOrderRow';
 import { useBalances } from '../../contexts/BalancesContext';
-import { useOrders } from '@/contexts/OrdersContext';
+import { OrderBookOrder, useOrders } from '@/contexts/OrdersContext';
 
 const headers = ['Order ID', 'Market', 'Claimable', 'Actions'];
 
-export function UnsettledOrdersTab({ orders }: { orders: OpenOrdersAccountWithKey[]; }) {
+export function UnsettledOrdersTab({ orders }: { orders: OrderBookOrder[]; }) {
   const sender = useTransactionSender();
   const wallet = useWallet();
   const { proposal } = useProposal();
@@ -39,9 +39,9 @@ export function UnsettledOrdersTab({ orders }: { orders: OpenOrdersAccountWithKe
       const txs = (
         await Promise.all(
           ordersToSettle.map((order) => {
-            const pass = order.account.market.equals(proposal.account.openbookPassMarket);
+            const pass = order.market.equals(proposal.account.openbookPassMarket);
             return settleFundsTransactions(
-              order.account.accountNum,
+              order.ownerSlot,
               pass,
               proposal,
               pass
@@ -83,7 +83,7 @@ export function UnsettledOrdersTab({ orders }: { orders: OpenOrdersAccountWithKe
       const txs = (
         await Promise.all(
           ordersToClose.map((order) =>
-            closeOpenOrdersAccountTransactions(new BN(order.account.accountNum)),
+            closeOpenOrdersAccountTransactions(new BN(order.ownerSlot)),
           ),
         )
       )
@@ -142,7 +142,7 @@ export function UnsettledOrdersTab({ orders }: { orders: OpenOrdersAccountWithKe
           </Table.Thead>
           <Table.Tbody>
             {orders.map((order) => (
-              <UnsettledOrderRow key={order.publicKey.toString()} order={order} />
+              <UnsettledOrderRow key={order.owner.toString()} order={order} />
             ))}
           </Table.Tbody>
         </Table>

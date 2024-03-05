@@ -1,10 +1,11 @@
 import { Stack, Table, Text } from '@mantine/core';
 import { OpenOrdersAccountWithKey } from '@/lib/types';
 import { OpenOrderRow } from './OpenOrderRow';
+import { OrderBookOrder } from '@/contexts/OrdersContext';
 
 const headers = ['Order ID', 'Market', 'Claimable', 'Actions'];
 
-export function UncrankedOrdersTab({ orders }: { orders: OpenOrdersAccountWithKey[] }) {
+export function UncrankedOrdersTab({ orders }: { orders: OrderBookOrder[]; }) {
   return (
     <Stack py="md">
       <Text size="sm">

@@ -28,8 +28,27 @@ import DisableNumberInputScroll from '../Utilities/DisableNumberInputScroll';
 import { useBalance } from '../../hooks/useBalance';
 import { useProvider } from '@/hooks/useProvider';
 import { useOrders } from '@/contexts/OrdersContext';
+import { PublicKey } from '@solana/web3.js';
 
-export function ConditionalMarketCard({ isPassMarket = false }: { isPassMarket?: boolean; }) {
+type Props = {
+  asks: any[][];
+  bids: any[][];
+  spreadString: string;
+  lastSlotUpdated: number;
+  baseVaultTokenMint: PublicKey;
+  quoteVaultTokenMint: PublicKey;
+  isPassMarket: boolean;
+};
+
+export function ConditionalMarketCard({
+  asks,
+  bids,
+  spreadString,
+  lastSlotUpdated,
+  baseVaultTokenMint,
+  quoteVaultTokenMint,
+  isPassMarket,
+}: Props) {
   const queryClient = useQueryClient();
   const { daoState } = useAutocrat();
   const { proposal, isCranking, crankMarkets } =
@@ -49,15 +68,11 @@ export function ConditionalMarketCard({ isPassMarket = false }: { isPassMarket?:
   const [observedTimestamp, setObservedTimestamp] = useState<number>(0);
 
   const { amount: baseBalance, fetchAmount: fetchBase } = useBalance(
-    isPassMarket
-      ? markets?.baseVault.conditionalOnFinalizeTokenMint
-      : markets?.baseVault.conditionalOnRevertTokenMint,
+    baseVaultTokenMint
   );
 
   const { amount: quoteBalance, fetchAmount: fetchQuote } = useBalance(
-    isPassMarket
-      ? markets?.quoteVault.conditionalOnFinalizeTokenMint
-      : markets?.quoteVault.conditionalOnRevertTokenMint,
+    quoteVaultTokenMint
   );
 
   const { data: slotData } = useQuery({
@@ -455,8 +470,11 @@ export function ConditionalMarketCard({ isPassMarket = false }: { isPassMarket?:
         ) : null}
         <ConditionalMarketOrderBook
           orderBookObject={orderBookObject}
-          isPassMarket={isPassMarket}
           setPriceFromOrderBook={setPriceFromOrderBook}
+          asks={asks}
+          bids={bids}
+          spreadString={spreadString}
+          lastSlotUpdated={lastSlotUpdated}
         />
         <Stack>
           <SegmentedControl

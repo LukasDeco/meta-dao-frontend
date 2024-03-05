@@ -9,11 +9,11 @@ import { useTransactionSender } from '@/hooks/useTransactionSender';
 import { useProposal } from '@/contexts/ProposalContext';
 import { isPartiallyFilled } from '@/lib/openbook';
 import { OpenOrderRow } from './OpenOrderRow';
-import { useOrders } from '@/contexts/OrdersContext';
+import { OrderBookOrder, useOrders } from '@/contexts/OrdersContext';
 
 const headers = ['Order ID', 'Market', 'Status', 'Size', 'Price', 'Notional', 'Actions'];
 
-export function OpenOrdersTab({ orders }: { orders: OpenOrdersAccountWithKey[]; }) {
+export function OpenOrdersTab({ orders }: { orders: OrderBookOrder[]; }) {
   const { isCranking, crankMarkets } = useProposal();
   const sender = useTransactionSender();
   const wallet = useWallet();
@@ -31,8 +31,8 @@ export function OpenOrdersTab({ orders }: { orders: OpenOrdersAccountWithKey[]; 
       await Promise.all(
         orders.map((order) =>
           cancelOrderTransactions(
-            new BN(order.account.accountNum),
-            proposal.account.openbookPassMarket.equals(order.account.market)
+            new BN(order.ownerSlot),
+            proposal.account.openbookPassMarket.equals(order.market)
               ? { publicKey: proposal.account.openbookPassMarket, account: markets.pass }
               : { publicKey: proposal.account.openbookFailMarket, account: markets.fail },
           ),
@@ -61,14 +61,14 @@ export function OpenOrdersTab({ orders }: { orders: OpenOrdersAccountWithKey[]; 
     setIsSettling(true);
     try {
       // HACK: Assumes all orders are for the same market
-      const pass = orders[0].account.market.equals(proposal.account.openbookPassMarket);
+      const pass = orders[0].market.equals(proposal.account.openbookPassMarket);
       const txs = (
         await Promise.all(
           orders
             .filter((order) => isPartiallyFilled(order))
             .map((order) =>
               settleFundsTransactions(
-                order.account.accountNum,
+                order.ownerSlot,
                 pass,
                 proposal,
                 pass
@@ -121,7 +121,7 @@ export function OpenOrdersTab({ orders }: { orders: OpenOrdersAccountWithKey[]; 
           </Table.Thead>
           <Table.Tbody>
             {orders.map((order) => (
-              <OpenOrderRow key={order.publicKey.toString()} order={order} />
+              <OpenOrderRow key={order.owner.toString()} order={order} />
             ))}
           </Table.Tbody>
         </Table>
